@@ -1,16 +1,30 @@
-const mysql = require('mysql2');
+const db = require('../db');
 
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'baskinrobbins',
-  dateStrings: true
-});
+const createUser = async (username, password) => {
+  await db.query('INSERT INTO `user` (username, password) VALUES (?, sha2(?, 256))', [username, password]);
+}
 
-connection.query(
-  'SELECT * FROM `user`',
-  function(err, results, fields) {
-    console.log(results);
-  }
-);
+const findUser = async (username, password) => {
+  const [rows] = await db.query('SELECT * FROM `user` WHERE username = ? AND password = sha2(?, 256)', [username, password]);
+
+  return rows.length ? rows[0] : null;
+}
+
+const getUserByUsername = async (username) => {
+  const [rows] = await db.query('SELECT * FROM `user` WHERE username = ?', [username]);
+
+  return rows.length ? rows[0] : null;
+};
+
+const deleteUserByUsername = async (username) => {
+  const [rows] = await db.query('DELETE FROM `user` WHERE username = ?', [username]);
+
+  return rows.affectedRows;
+}
+
+module.exports = {
+  createUser,
+  findUser,
+  getUserByUsername,
+  deleteUserByUsername
+};
