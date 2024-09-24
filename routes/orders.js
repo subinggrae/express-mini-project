@@ -1,5 +1,5 @@
-// express 모듈 불러오기
 const express = require('express');
+const orderModel = require('../models/order');
 const router = express.Router();
 router.use(express.json());
 
@@ -19,18 +19,23 @@ const currentIndex = (function() {
  * @Method [GET, POST]
  */
 router.route('/')
-  .get((req, res) => {
-    const channels = [];
+  .get(async (req, res) => {
+    const orders = await orderModel.getAllOrders();
 
-    channels.push(...db.values());
-
-    res.status(200).json(channels);
+    res.status(200).json(orders);
   })
-  .post((req, res) => {
-    const { flavor, size, quantity, price } = req.body;
+  .post(async (req, res) => {
+    const { flavor, size, quantity, price, userId } = req.body;
 
-    if (!(flavor && size && quantity && price)) {
-      return res.status(400).end();
+    if (!(flavor && size && quantity && price && userId)) {
+      return res.status(400).json({ error: '올바른 사용자 입력이 아닙니다.'});
+    }
+
+    try {
+      await orderModel.createOrder([flavor, size, quantity, price, userId]);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: '서버에서 주문을 처리할 수 없습니다.' });
     }
 
     db.set(currentIndex.increase(), req.body);
@@ -42,40 +47,41 @@ router.route('/')
  * @Method [GET, PUT, DELETE]
  */
 router.route('/:id')
-  .get((req, res) => {
+  .get(async (req, res) => {
     const id = parseInt(req.params.id);
-    const order = db.get(id);
+    const order = await orderModel.getOrderById(id);
 
     if (!order) {
-      return res.status(404).end();
+      return res.status(404).json({ error: '해당하는 주문을 찾을 수 없습니다.' });
     }
 
     res.status(200).json(order);
   })
-  .put((req, res) => {
+  .put(async (req, res) => {
     const id = parseInt(req.params.id);
-    const order = db.get(id);
     const { flavor, size, quantity, price } = req.body;
 
     if (!(flavor && size && quantity && price)) {
-      return res.status(400).end();
-    }
-    if (!order) {
-      return res.status(404).end();
+      return res.status(400).json({ error: '올바른 사용자 입력이 아닙니다.'});
     }
 
-    db.set(id, req.body);
-    res.status(200).json({ message: '주문 수정이 완료되었습니다.' });
+    const updateRows = await orderModel.updateOrderById(id, [flavor, size, quantity, price]);
+
+    if (updateRows > 0) {
+      return res.status(200).json({ message: '주문 수정이 완료되었습니다.' });
+    }
+
+    res.status(404).json({ error: '주문을 정상적으로 처리할 수 없습니다.' });
   })
-  .delete((req, res) => {
+  .delete(async (req, res) => {
     const id = parseInt(req.params.id);
+    const deleteRows = await orderModel.deleteOrderById(id);
 
-    if (!db.get(id)) {
-      return res.status(404).end();
+    if (deleteRows > 0) {
+      return res.status(200).json({ message: '주문 취소가 완료되었습니다.' });
     }
 
-    db.delete(id);
-    res.status(200).json({ message: '주문 취소가 완료되었습니다.' });
+    res.status(404).json({ error: '주문을 정상적으로 삭제할 수 없습니다.' });
   });
 
   module.exports = router;

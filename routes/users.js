@@ -1,4 +1,3 @@
-// express 모듈 불러오기
 const express = require('express');
 const userModel = require('../models/user');
 const router = express.Router();
@@ -9,7 +8,7 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!(username && password)) {
-    return res.status(400).json({ error: '제대로 된 사용자 요청이 아닙니다.'});
+    return res.status(400).json({ error: '올바른 사용자 입력이 아닙니다.'});
   }
 
   const user = await userModel.findUser(username, password);
@@ -26,13 +25,13 @@ router.post('/register', async (req, res) => {
   const { username, password } = req.body;
 
   if (!(username && password)) {
-    return res.status(400).json({ error: '제대로 된 사용자 요청이 아닙니다.'});
+    return res.status(400).json({ error: '올바른 사용자 입력이 아닙니다.'});
   }
 
   try {
     await userModel.createUser(username, password);
   } catch (error) {
-    return res.status(409).json({ error: '회원가입을 정상적으로 처리할 수 없습니다.' });
+    return res.status(500).json({ error: '회원가입을 정상적으로 처리할 수 없습니다.' });
   }
 
   res.status(201).json({ message : `${username}님 회원이 되신 것을 진심으로 환영합니다.` });
@@ -40,7 +39,7 @@ router.post('/register', async (req, res) => {
 
 // 회원 개별 조회 & 삭제
 router.route('/users/:username')
-  .get( async (req, res) => {
+  .get(async (req, res) => {
     const username = req.params.username;
     const user = await userModel.getUserByUsername(username);
 
@@ -51,11 +50,11 @@ router.route('/users/:username')
     console.log(user);
     res.status(200).json(user);
   })
-  .delete( async (req, res) => {
+  .delete(async (req, res) => {
     const username = req.params.username;
-    const affectedRows = await userModel.deleteUserByUsername(username);
+    const deleteRows = await userModel.deleteUserByUsername(username);
 
-    if (!affectedRows) {
+    if (deleteRows > 0) {
       return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
     }
 
