@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
-
+const jwt = require('jsonwebtoken');
 const userModel = require('../models/user');
 const userValidator = require('../middleware/userValidator');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 router.use(express.json());
 // 로그인
@@ -11,9 +14,17 @@ router.post('/login', userValidator.loginValidation, async (req, res) => {
   const user = await userModel.findUser(username, password);
 
   if (!user) {
-    return res.status(200).json({ message: '아이디와 비밀번호를 확인해주세요.' });
+    return res.status(403).json({ message: '아이디와 비밀번호를 확인해주세요.' });
   }
 
+  const token = jwt.sign({ 
+    username: username
+  }, process.env.SECRET_KEY, {
+    expiresIn: '30m',
+    issuer: 'subin'
+  });
+
+  res.setHeader('Authorization', `Bearer ${token}`);
   res.status(200).json({ message: '로그인 성공!' });
 })
 
