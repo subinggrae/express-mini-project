@@ -1,18 +1,15 @@
 const express = require('express');
-const userModel = require('../models/user');
 const router = express.Router();
+
+const userModel = require('../models/user');
+const userValidator = require('../middleware/userValidator');
+
 router.use(express.json());
-
 // 로그인
-router.post('/login', async (req, res) => {
+router.post('/login', userValidator.loginValidation, async (req, res) => {
   const { username, password } = req.body;
-
-  if (!(username && password)) {
-    return res.status(400).json({ error: '올바른 사용자 입력이 아닙니다.'});
-  }
-
   const user = await userModel.findUser(username, password);
-  
+
   if (!user) {
     return res.status(200).json({ message: '아이디와 비밀번호를 확인해주세요.' });
   }
@@ -21,12 +18,8 @@ router.post('/login', async (req, res) => {
 })
 
 // 회원가입
-router.post('/register', async (req, res) => {
+router.post('/register', userValidator.registerValidation, async (req, res) => {
   const { username, password } = req.body;
-
-  if (!(username && password)) {
-    return res.status(400).json({ error: '올바른 사용자 입력이 아닙니다.'});
-  }
 
   try {
     await userModel.createUser(username, password);
@@ -39,7 +32,7 @@ router.post('/register', async (req, res) => {
 
 // 회원 개별 조회 & 삭제
 router.route('/users/:username')
-  .get(async (req, res) => {
+  .get(userValidator.usernameValidation, async (req, res) => {
     const username = req.params.username;
     const user = await userModel.getUserByUsername(username);
 
@@ -47,14 +40,13 @@ router.route('/users/:username')
       return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
     }
 
-    console.log(user);
     res.status(200).json(user);
   })
-  .delete(async (req, res) => {
+  .delete(userValidator.usernameValidation, async (req, res) => {
     const username = req.params.username;
     const deleteRows = await userModel.deleteUserByUsername(username);
 
-    if (deleteRows > 0) {
+    if (deleteRows <= 0) {
       return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
     }
 
